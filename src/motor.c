@@ -12,7 +12,7 @@
 #include "../include/filter.h"
 #include "../include/motor.h"
 
-// Constants
+// Constants 
 // const double IN_TO_M = 0.0254;  
 const double ENC_SF = 0.0254 * 7239;  // pulses / m
 const int MAX_SPEED = 480;
@@ -52,9 +52,14 @@ struct Motor {
     char* ip;
     int port;
     clock_t next_time;
+    int motor_id;
+    char* get_des_pos_str;
+    char* get_des_vel_str;
+    char* set_pos_str;
+    char* set_vel_str;
 };
 
-Motor_t* Motor(int channel, char* ip)
+Motor_t* Motor(int channel, char* ip, int port, int motor_id)
 {
     Motor_t* motor;
     motor = malloc(sizeof(Motor_t));
@@ -67,6 +72,7 @@ Motor_t* Motor(int channel, char* ip)
     motor->des_pos = 0;
     motor->des_vel = 0;
     motor->c = redis_context;
+    motor->motor_id = motor_id;
 
     if (channel == 0) {
         motor->pin_flt = _pin_M1FLT;
@@ -82,6 +88,8 @@ Motor_t* Motor(int channel, char* ip)
     gpioSetPullUpDown(motor->pin_flt, PI_PUD_UP);  // pull up fault pin 
     gpioWrite(motor->pin_en, 1);  // enable driver
 
+    motor->ip = ip;    
+    motor->port = port;
     redis_context = malloc(sizeof(redisContext));
     struct timeval timeout = { 1, 500000 }; // 1.5 seconds
     redis_context = redisConnectWithTimeout(motor->ip, motor->port, timeout);
@@ -101,15 +109,36 @@ Motor_t* Motor(int channel, char* ip)
     motor->c = redis_context;
     motor->reply = redis_reply;
 
-    motor->ip = ip;    
+    // strings 
+    char motor_id_str[2];
+    snprintf(motor_id_str, 2, "%u", motor_id);
+    char set_pos_str[] = "SET POS";
+    char set_vel_str[] = "SETVEL";
+    char get_des_pos_str[] = "GET POS";
+    char get_des_vel_str[] = "GET VEL";
+    char format_str[] = "%s";
+    
+    snprintf(set_pos_str, sizeof(motor_id_str), "%s", motor_id_str);
+    snprintf(set_pos_str, sizeof("%s"), "%s", format_str);
+    motor->set_pos_str = set_pos_str;
+
+    snprintf(set_vel_str, sizeof(motor_id_str), "%s", motor_id_str);
+    snprintf(set_vel_str, sizeof("%s"), "%s", format_str);
+    motor->set_vel_str = set_vel_str;
+
+    snprintf(get_des_pos_str, sizeof(motor_id_str), "%s", motor_id_str);
+    motor->get_des_pos_str = get_des_pos_str;
+
+    snprintf(get_des_vel_str, sizeof(motor_id_str), "%s", motor_id_str);
+    motor->get_des_vel_str = get_des_vel_str;
 
     next_t = clock();
     motor->t_prev = (double) next_t / CLOCKS_PER_SEC;
     motor->t_curr = (double) next_t / CLOCKS_PER_SEC;
 
-    int order = 0;  // dimensionality of input - 1
+    int order = 6;  
     int sampling_frequency = 5000;  // drivers running at 5 kHz
-    int half_power_frequency = 10;  // (aka cutoff frequency)
+    int half_power_frequency = 1;  // cutoff frequency 
     low_pass_filter = create_bw_low_pass_filter(order, sampling_frequency, half_power_frequency);
 
     return motor;
@@ -130,20 +159,19 @@ void setTarget(Motor_t* motor, double pos, double vel)
 
 void readValues(Motor_t* motor)
 {
-    char* ptr;
-    motor->reply = redisCommand(motor->c, "GET ");
-    motor->des_pos = strtod(motor->reply->str, &ptr);
+    motor->reply = redisCommand(motor->c, motor->get_des_pos_str);
+    motor->des_pos = strtod(motor->reply->str, NULL);
     freeReplyObject(motor->reply);
-    motor->reply = redisCommand(motor->c, "GET ");
-    motor->des_vel = strtod(motor->reply->str, &ptr);
+    motor->reply = redisCommand(motor->c, motor->get_des_vel_str);
+    motor->des_vel = strtod(motor->reply->str, NULL);
     freeReplyObject(motor->reply);
 }
 
 void writeValues(Motor_t* motor)
 {
-    motor->reply = redisCommand(motor->c, "SET ");  // set position 
+    motor->reply = redisCommand(motor->c, motor->set_pos_str);  // set position 
     freeReplyObject(motor->reply);
-    motor->reply = redisCommand(motor->c, "SET ");  // set velocity 
+    motor->reply = redisCommand(motor->c, motor->set_vel_str);  // set velocity 
     freeReplyObject(motor->reply); 
 }
 
@@ -159,8 +187,8 @@ void updateControl(Motor_t* motor)
     readValues(motor);
 
     // Get time 
-    next_t = clock();
-    motor->t_curr = (double) next_t;
+    motor->next_time = clock();
+    motor->t_curr = (double) motor->next_time;
     double dt = motor->t_curr - motor->t_prev;
 
     // Update velocity 

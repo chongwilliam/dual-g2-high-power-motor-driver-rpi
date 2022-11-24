@@ -23,7 +23,7 @@
 struct Motor;
 typedef struct Motor Motor_t;
 
-Motor_t* Motor(int channel, char* ip);
+Motor_t* Motor(int channel, char* ip, int port, int motor_id);
 void setGains(Motor_t* motor, double kp, double kv, double ki);
 void setTarget(Motor_t* motor, double pos, double vel);
 void updateControl(Motor_t* motor);
