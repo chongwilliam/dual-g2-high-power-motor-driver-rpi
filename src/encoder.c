@@ -9,6 +9,10 @@
  * 
  */
 
+/* 
+    Copied from pigpio examples 
+*/
+
 #include "../include/encoder.h"
 
 struct _Pi_Renc_s

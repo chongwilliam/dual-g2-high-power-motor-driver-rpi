@@ -9,57 +9,21 @@
  * 
  */
 
-#include "../include/filter.h"
 #include "../include/motor.h"
 
 // Constants 
-// const double IN_TO_M = 0.0254;  
-const double ENC_SF = 0.0254 * 7239;  // pulses / m
-const int MAX_SPEED = 480;
-const int _pin_M1FLT = 5;
-const int _pin_M2FLT = 6;
-const int _pin_M1PWM = 12;
-const int _pin_M2PWM = 13;
-const int _pin_M1EN = 22;
-const int _pin_M2EN = 23;
-const int _pin_M1DIR = 24;
-const int _pin_M2DIR = 25;
+// const static double IN_TO_M = 0.0254;  
+const static int MAX_SPEED = 480;
+const static int _pin_M1FLT = 5;
+const static int _pin_M2FLT = 6;
+const static int _pin_M1PWM = 12;
+const static int _pin_M2PWM = 13;
+const static int _pin_M1EN = 22;
+const static int _pin_M2EN = 23;
+const static int _pin_M1DIR = 24;
+const static int _pin_M2DIR = 25;
 
-// Globals 
-clock_t next_t;
-redisContext* redis_context;
-redisReply* redis_reply;
-BWLowPass* low_pass_filter;
-
-struct Motor {
-    double kp;
-    double kv;
-    double ki;
-    double prev_pos;
-    double curr_pos;
-    double curr_vel;
-    double des_pos;
-    double des_vel;
-    double int_err;
-    double t_prev;
-    double t_curr;
-    int pin_flt;
-    int pin_pwm;
-    int pin_en;
-    int pin_dir;
-    redisContext* c;
-    redisReply* reply;
-    char* ip;
-    int port;
-    clock_t next_time;
-    int motor_id;
-    char* get_des_pos_str;
-    char* get_des_vel_str;
-    char* set_pos_str;
-    char* set_vel_str;
-};
-
-Motor_t* Motor(int channel, char* ip, int port, int motor_id)
+Motor_t* Motor(int channel, int motor_id, char* ip, int port)
 {
     Motor_t* motor;
     motor = malloc(sizeof(Motor_t));
@@ -71,7 +35,6 @@ Motor_t* Motor(int channel, char* ip, int port, int motor_id)
     motor->curr_vel = 0;
     motor->des_pos = 0;
     motor->des_vel = 0;
-    motor->c = redis_context;
     motor->motor_id = motor_id;
 
     if (channel == 0) {
@@ -90,30 +53,29 @@ Motor_t* Motor(int channel, char* ip, int port, int motor_id)
 
     motor->ip = ip;    
     motor->port = port;
-    redis_context = malloc(sizeof(redisContext));
+    // redisContext* redis_context;
+    motor->redis_context = malloc(sizeof(redisContext));
     struct timeval timeout = { 1, 500000 }; // 1.5 seconds
-    redis_context = redisConnectWithTimeout(motor->ip, motor->port, timeout);
-    if (redis_context == NULL || redis_context->err) {
-        if (redis_context) {
-            printf("Connection error: %s\n", redis_context->errstr);
-            redisFree(redis_context);
+    motor->redis_context = redisConnectWithTimeout(motor->ip, motor->port, timeout);
+    if (motor->redis_context == NULL || motor->redis_context->err) {
+        if (motor->redis_context) {
+            printf("Connection error: %s\n", motor->redis_context->errstr);
+            redisFree(motor->redis_context);
         } else {
             printf("Connection error: can't allocate redis context\n");
         }
         exit(1);
     }
 
-    redis_reply = malloc(sizeof(redisReply));
-    freeReplyObject(redis_reply);
-
-    motor->c = redis_context;
-    motor->reply = redis_reply;
+    // redisReply* redis_reply;
+    motor->redis_reply = malloc(sizeof(redisReply));
+    freeReplyObject(motor->redis_reply);
 
     // strings 
     char motor_id_str[2];
     snprintf(motor_id_str, 2, "%u", motor_id);
     char set_pos_str[] = "SET POS";
-    char set_vel_str[] = "SETVEL";
+    char set_vel_str[] = "SET VEL";
     char get_des_pos_str[] = "GET POS";
     char get_des_vel_str[] = "GET VEL";
     char format_str[] = "%s";
@@ -132,14 +94,14 @@ Motor_t* Motor(int channel, char* ip, int port, int motor_id)
     snprintf(get_des_vel_str, sizeof(motor_id_str), "%s", motor_id_str);
     motor->get_des_vel_str = get_des_vel_str;
 
-    next_t = clock();
-    motor->t_prev = (double) next_t / CLOCKS_PER_SEC;
-    motor->t_curr = (double) next_t / CLOCKS_PER_SEC;
+    motor->loop_timer = malloc(sizeof(LoopTimer_t));
+    motor->loop_timer = LoopTimer(2000);  // 2 kHz control by default 
 
     int order = 6;  
-    int sampling_frequency = 5000;  // drivers running at 5 kHz
-    int half_power_frequency = 1;  // cutoff frequency 
-    low_pass_filter = create_bw_low_pass_filter(order, sampling_frequency, half_power_frequency);
+    int sampling_frequency = 2000;  // drivers running at 2 kHz
+    int half_power_frequency = 1;  // cutoff frequency (Hz)
+    motor->low_pass_filter = malloc(sizeof(BWLowPass));
+    motor->low_pass_filter = create_bw_low_pass_filter(order, sampling_frequency, half_power_frequency);
 
     return motor;
 }
@@ -159,26 +121,26 @@ void setTarget(Motor_t* motor, double pos, double vel)
 
 void readValues(Motor_t* motor)
 {
-    motor->reply = redisCommand(motor->c, motor->get_des_pos_str);
-    motor->des_pos = strtod(motor->reply->str, NULL);
-    freeReplyObject(motor->reply);
-    motor->reply = redisCommand(motor->c, motor->get_des_vel_str);
-    motor->des_vel = strtod(motor->reply->str, NULL);
-    freeReplyObject(motor->reply);
+    motor->redis_reply = redisCommand(motor->redis_context, motor->get_des_pos_str);
+    motor->des_pos = strtod(motor->redis_reply->str, NULL);
+    freeReplyObject(motor->redis_reply);
+    motor->redis_reply = redisCommand(motor->redis_context, motor->get_des_vel_str);
+    motor->des_vel = strtod(motor->redis_reply->str, NULL);
+    freeReplyObject(motor->redis_reply);
 }
 
 void writeValues(Motor_t* motor)
 {
-    motor->reply = redisCommand(motor->c, motor->set_pos_str);  // set position 
-    freeReplyObject(motor->reply);
-    motor->reply = redisCommand(motor->c, motor->set_vel_str);  // set velocity 
-    freeReplyObject(motor->reply); 
+    motor->redis_reply = redisCommand(motor->redis_context, motor->set_pos_str, motor->curr_pos);  // set position 
+    freeReplyObject(motor->redis_reply);
+    motor->redis_reply = redisCommand(motor->redis_context, motor->set_vel_str, motor->curr_vel);  // set velocity 
+    freeReplyObject(motor->redis_reply); 
 }
 
 void updateVel(Motor_t* motor, double dt)
 {
     double vel = (motor->curr_pos - motor->prev_pos) / dt;
-    motor->curr_vel = bw_low_pass(low_pass_filter, vel);    
+    motor->curr_vel = bw_low_pass(motor->low_pass_filter, vel);    
 }
 
 void updateControl(Motor_t* motor) 
@@ -186,10 +148,9 @@ void updateControl(Motor_t* motor)
     // Read targets
     readValues(motor);
 
-    // Get time 
-    motor->next_time = clock();
-    motor->t_curr = (double) motor->next_time;
-    double dt = motor->t_curr - motor->t_prev;
+    // Get elapsed time and set start timer
+    double dt = getElapsedTime(motor->loop_timer);
+    setStartTime(motor->loop_timer);
 
     // Update velocity 
     updateVel(motor, dt);
@@ -213,10 +174,20 @@ void updateControl(Motor_t* motor)
 
     gpioWrite(motor->pin_dir, dir_value);
     gpioHardwarePWM(motor->pin_pwm, 5000, (int) (speed * 6250 / 3));
+
+    // push forward
+    motor->prev_pos = motor->curr_pos;
     
     // Print information    
     writeValues(motor);
 
-    // push forward
-    motor->t_prev = motor->t_curr;
+    // Wait until next loop
+    waitUntilNextLoop(motor->loop_timer);  // this continuously updates end timer 
+}
+
+void stopMotor(Motor_t* motor)
+{
+    setGains(motor, 0, 0, 0);
+    gpioHardwarePWM(motor->pin_pwm, 5000, 0);  // no speed sent to pwm pin 
+    gpioWrite(motor->pin_en, 0);  // disable driver
 }

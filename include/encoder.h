@@ -17,6 +17,8 @@
 
 #include <pigpio.h>
 
+// const double ENC_SF = (1. / 7239) * (1 / 0.0254);  // 7239 pulses / inch * inch / meter
+
 typedef void (*Pi_Renc_CB_t)(int);
 
 struct _Pi_Renc_s;

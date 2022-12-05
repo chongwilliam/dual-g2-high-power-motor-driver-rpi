@@ -27,8 +27,10 @@ include_directories(${pigpio_INCLUDE_DIR})
 
 # Collect all source files 
 set(SOURCE_FILES    ${CMAKE_CURRENT_SOURCE_DIR}/src/encoder.c
-                    ${CMAKE_CURRENT_SOURCE_DIR}/src/motor.c
-                    ${CMAKE_CURRENT_SOURCE_DIR}/src/filter.c)
+                    ${CMAKE_CURRENT_SOURCE_DIR}/src/loop_timer.c
+                    ${CMAKE_CURRENT_SOURCE_DIR}/src/filter.c
+                    ${CMAKE_CURRENT_SOURCE_DIR}/src/motor.c                    
+                    )
 
 # Directories for application or test 
 # add_subdirectory(apps)

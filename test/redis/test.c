@@ -136,8 +136,8 @@ int main()
 
         // read
         readValues(test);
-        printf("%f \n", test->des_pos);
-        printf("%f \n", test->des_vel);
+        // printf("%f \n", test->des_pos);
+        // printf("%f \n", test->des_vel);
 
         // write
         writeValues(test, i-1, i+1);
