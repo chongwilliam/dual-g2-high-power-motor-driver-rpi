@@ -53,23 +53,55 @@ static void _cb(int gpio, int level, uint32_t tick, void *user)
 
     if (gpio == renc->gpioA) renc->levA = level; else renc->levB = level;
 
-    if (gpio != renc->lastGpio) /* debounce */
-    {
+    if (gpio != renc->lastGpio) { /* debounce */
         renc->lastGpio = gpio;
 
-        // if gpioA turns from 0 to 1
-        if ((gpio == renc->gpioA) && (level == 1))
-        {
+		if (gpio == renc->gpioA) {
+		    if (level == 1) {
+				if (renc->levB) {
+			    	(renc->callback)(1);
+				} else {
+					(renc->callback)(-1);
+				}
+			} else {
+				if (renc->levB == 0) {
+					(renc->callback)(1);
+				} else {
+					(renc->callback)(-1);
+				}
+			}
+		} else {
+			if (level == 1) {
+				if (renc->levA) {
+					(renc->callback)(-1);
+				} else {
+					(renc->callback)(1);
+				}
+			} else {
+				if (renc->levA == 0) {
+					(renc->callback)(-1);
+				} else {
+					(renc->callback)(1);
+				}
+			}
+		}
+	}
+		
+	    
+
+        // if igpioA turns from 0 to 1
+        //if ((gpio == renc->gpioA) && (level == 1))
+        //{
             // if gpioB is 1
-            if (renc->levB) (renc->callback)(1);
-        }
+           // if (renc->levB) (renc->callback)(1);
+        //}
         // if gpioB turns from 0 to 1
-        else if ((gpio == renc->gpioB) && (level == 1))
-        {
+        //else if ((gpio == renc->gpioB) && (level == 1))
+        //{
             // if gpioA is 1 
-            if (renc->levA) (renc->callback)(-1);
-        }
-    }
+           // if (renc->levA) (renc->callback)(-1);
+        //}
+    //}
 }
 
 Pi_Renc_t * Pi_Renc(int gpioA, int gpioB, Pi_Renc_CB_t callback)

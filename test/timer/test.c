@@ -30,5 +30,6 @@ int main() {
         i++;
     }
 
-    printf("Average loop time (s): %f", avg_loop_time / n_samples);
+    printf("Average loop time (s): %f\n", avg_loop_time / n_samples);
+    printf("Average frequency (Hz): %f\n", n_samples / avg_loop_time);
 }

@@ -48,8 +48,11 @@ struct Motor_s {
     int motor_id;
     char* get_des_pos_str;
     char* get_des_vel_str;
+    char* set_get_des_pos_str;
+    char* set_get_des_vel_str;
     char* set_pos_str;
     char* set_vel_str;
+    char* buffer;
 };
 typedef struct Motor_s Motor_t;
 

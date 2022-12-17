@@ -112,10 +112,11 @@ static void readValues(Test_t* test)
     freeReplyObject(test->reply);
 }
 
-static void writeValues(Test_t* test, double val_a, double val_b)
+static void writeValues(Test_t* test, float val_a, float val_b)
 {
     snprintf(test->buffer, 10, "%f", val_a);
     test->reply = redisCommand(test->c, "SET test0 %s", test->buffer);  // set position 
+    //test->reply = redisCommand(test->c, "SET test0 %f", val_a);
     freeReplyObject(test->reply);
     snprintf(test->buffer, 10, "%f", val_b);
     test->reply = redisCommand(test->c, "SET test1 %s", test->buffer);  // set velocity 
@@ -127,11 +128,13 @@ int main()
     Test_t* test = Test(0, "127.0.0.1", 6379, 0);
     writeValues(test, 0, 0);
 
-    int n_samples = 10;  
+    int n_samples = 1000;  
     int i = 0;
+    double avg_loop_time = 0;
     while (i < n_samples) {
         updateTime(test);        
-        printf("%f us\n", (test->t_curr - test->t_prev) * 1e6);
+        // printf("%f us\n", (test->t_curr - test->t_prev) * 1e6);
+	avg_loop_time += (test->t_curr - test->t_prev) * 1e6;
         test->t_prev = test->t_curr;
 
         // read
@@ -144,4 +147,6 @@ int main()
 
         i++;
     }
+
+    printf("Average Loop Time (us): %f\n", avg_loop_time / n_samples);
 }

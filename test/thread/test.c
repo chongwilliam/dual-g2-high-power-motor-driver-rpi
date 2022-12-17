@@ -23,6 +23,7 @@ void* func1(void* args)
     while (1) {
         if (terminate_flag) {
             printf("Thread 1 Terminate Motor\n");
+	    break;
         }
     }
 }
@@ -32,6 +33,7 @@ void* func2(void* args)
     while (1) {
         if (terminate_flag) {
             printf("Thread 2 Terminate Motor\n");
+	    break;
         }
     }
 }
