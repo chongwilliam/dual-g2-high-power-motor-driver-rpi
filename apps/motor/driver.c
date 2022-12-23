@@ -103,14 +103,14 @@ int main() {
 	FILE* fp;
 	char buff[255];
 	double prev_pos_m0, prev_pos_m1;
-	fp = fopen("/home/ubuntu/position.txt", "r");
+	fp = fopen("../../../data/position.txt", "r");
 	int i = fscanf(fp, "%lf %lf", &prev_pos_m0, &prev_pos_m1);	
 	if (i != 2) {
 		printf("Previous position can't be read\n");
 		return -1;
 	}
 	fclose(fp);
-	fp = fopen("/home/ubuntu/position.txt", "w");
+	fp = fopen("../../../data/position.txt", "w");
 	printf("Motor 0 previous position: %f\n", prev_pos_m0);
 	printf("Motor 1 previous position: %f\n", prev_pos_m1);
 	pos_m0 = (int)(prev_pos_m0 / ENC_SF);
