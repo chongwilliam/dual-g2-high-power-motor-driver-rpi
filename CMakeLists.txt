@@ -33,5 +33,5 @@ set(SOURCE_FILES    ${CMAKE_CURRENT_SOURCE_DIR}/src/encoder.c
                     )
 
 # Directories for application or test 
-# add_subdirectory(apps)
+add_subdirectory(apps)
 add_subdirectory(test)

@@ -61,6 +61,7 @@ void setGains(Motor_t* motor, double kp, double kv, double ki);
 void setTarget(Motor_t* motor, double pos, double vel);
 void readValues(Motor_t* motor);
 void writeValues(Motor_t* motor);
+void writeDesiredValues(Motor_t* motor, double pos);
 void updateVel(Motor_t* motor, double dt);
 void updateControl(Motor_t* motor);
 void stopMotor(Motor_t* motor);

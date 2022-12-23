@@ -119,10 +119,10 @@ Motor_t* Motor(int channel, int motor_id, char* ip, int port)
     freeReplyObject(motor->redis_reply);
 
     motor->loop_timer = malloc(sizeof(LoopTimer_t));
-    motor->loop_timer = LoopTimer(200);  // 1 kHz control by default 
+    motor->loop_timer = LoopTimer(1000);  // 1 kHz control by default 
 
     int order = 6;  
-    int sampling_frequency = 200;  // drivers running at 2 kHz
+    int sampling_frequency = 1000;  // drivers running at 2 kHz
     int half_power_frequency = 0.1;  // cutoff frequency (Hz)
     motor->low_pass_filter = malloc(sizeof(BWLowPass));
     motor->low_pass_filter = create_bw_low_pass_filter(order, sampling_frequency, half_power_frequency);
@@ -161,6 +161,13 @@ void writeValues(Motor_t* motor)
     snprintf(motor->buffer, 10, "%f", motor->curr_vel);
     motor->redis_reply = redisCommand(motor->redis_context, motor->set_vel_str, motor->buffer);  // set velocity 
     freeReplyObject(motor->redis_reply); 
+}
+
+void writeDesiredValues(Motor_t* motor, double pos)
+{
+	snprintf(motor->buffer, 10, "%f", pos);
+	motor->redis_reply = redisCommand(motor->redis_context, motor->set_get_des_pos_str, motor->buffer);
+	freeReplyObject(motor->redis_reply);
 }
 
 void updateVel(Motor_t* motor, double dt)
