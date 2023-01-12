@@ -13,23 +13,32 @@
 #define _LOOPTIMER_H
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <time.h>
+#include <math.h>
+
+typedef struct timespec timespec_t;
 
 struct LoopTimer_s
 {
-    struct timespec start;
-    struct timespec end;
+	timespec_t t_start;
+    timespec_t t_curr;
+    timespec_t t_next;
+	timespec_t t_loop;
     int frequency;
-    double sample_time;
+	double sample_time;
 };
 
 typedef struct LoopTimer_s LoopTimer_t;
 
 LoopTimer_t* LoopTimer(int frequency);
-
-void setLoopFrequency(LoopTimer_t* timer, int _frequency);
-void setStartTime(LoopTimer_t* timer);
+double timespec_to_double(const timespec_t t_ret);
+void initTimer(LoopTimer_t* timer, unsigned int initial_wait_nanoseconds);
+void getCurrentTime(timespec_t* t);
 double getElapsedTime(LoopTimer_t* timer);
+double getLoopTime(LoopTimer_t* timer);
+void nanoSleepUntil(const timespec_t t_next);
 void waitUntilNextLoop(LoopTimer_t* timer);
 
 #endif
+

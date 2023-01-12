@@ -35,11 +35,29 @@ struct _Pi_Renc_s
 
        +---------+         +---------+            0
        |         |         |         |
-   B   |         |         |         |
+   B   i|         |         |         |
        |         |         |         |
    ----+         +---------+         +---------+  1
 
 */
+static void _cb0(int gpio, int level, uint32_t tick, void *user)
+{
+    Pi_Renc_t *renc;
+    renc = user;
+    if (gpio == renc->gpioA) renc->levA = level; else renc->levB = level;
+    if (gpio != renc->lastGpio)
+    {
+		renc->lastGpio = gpio;
+		if ((gpio == renc->gpioA) && (level == 1)) 
+		{
+			if (renc->levB) (renc->callback)(1);
+		}
+		else if ((gpio == renc->gpioB) && (level == 1)) 
+		{
+			if (renc->levA) (renc->callback)(-1);
+		}
+	}
+}
 
 /*
     Signal 2 leads when extending

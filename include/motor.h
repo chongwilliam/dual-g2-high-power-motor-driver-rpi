@@ -56,7 +56,7 @@ struct Motor_s {
 };
 typedef struct Motor_s Motor_t;
 
-Motor_t* Motor(int channel, int motor_id, char* ip, int port);
+Motor_t* Motor(int channel, int motor_id, char* ip, int port, int freq);
 void setGains(Motor_t* motor, double kp, double kv, double ki);
 void setTarget(Motor_t* motor, double pos, double vel);
 void readValues(Motor_t* motor);

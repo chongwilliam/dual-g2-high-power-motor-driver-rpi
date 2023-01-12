@@ -24,7 +24,7 @@ const static int _pin_M1DIR = 24;
 const static int _pin_M2DIR = 25;
 // char output[10];
 
-Motor_t* Motor(int channel, int motor_id, char* ip, int port)
+Motor_t* Motor(int channel, int motor_id, char* ip, int port, int freq)
 {
     Motor_t* motor;
     motor = malloc(sizeof(Motor_t));
@@ -119,10 +119,10 @@ Motor_t* Motor(int channel, int motor_id, char* ip, int port)
     freeReplyObject(motor->redis_reply);
 
     motor->loop_timer = malloc(sizeof(LoopTimer_t));
-    motor->loop_timer = LoopTimer(1000);  // 1 kHz control by default 
+    motor->loop_timer = LoopTimer(freq);  // 1 kHz control by default 
 
     int order = 6;  
-    int sampling_frequency = 1000;  // drivers running at 2 kHz
+    int sampling_frequency = freq;  // drivers running at 2 kHz
     int half_power_frequency = 0.1;  // cutoff frequency (Hz)
     motor->low_pass_filter = malloc(sizeof(BWLowPass));
     motor->low_pass_filter = create_bw_low_pass_filter(order, sampling_frequency, half_power_frequency);
@@ -182,8 +182,8 @@ void updateControl(Motor_t* motor)
     readValues(motor);
 
     // Get elapsed time and set start timer
-    double dt = getElapsedTime(motor->loop_timer);
-    setStartTime(motor->loop_timer);
+    double dt = getLoopTime(motor->loop_timer);
+    // setStartTime(motor->loop_timer);
 
     // Update velocity 
     updateVel(motor, dt);

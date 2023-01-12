@@ -78,7 +78,8 @@ void* callback_m0(void* data)
     stick_this_thread_to_core(1);
     double pos;
     Motor_t* motor = (Motor_t*) data;
-    setStartTime(motor->loop_timer);
+    // setStartTime(motor->loop_timer);
+	initTimer(motor->loop_timer, 0);
     while (!terminate_flag) {
         pos = pos_m0 * ENC_SF;
         motor->curr_pos = pos;
@@ -91,7 +92,8 @@ void* callback_m1(void* data)
     stick_this_thread_to_core(2);
     double pos;
     Motor_t* motor = (Motor_t*) data;
-    setStartTime(motor->loop_timer);
+    // setStartTime(motor->loop_timer);
+	initTimer(motor->loop_timer, 0);
     while (!terminate_flag) {
         pos = pos_m1 * ENC_SF;
         motor->curr_pos = pos;
@@ -113,8 +115,8 @@ int main() {
 
     // Initialize motors 
     printf("Initializing Motors\n");
-    Motor_t* motor_0 = Motor(0, 0, "127.0.0.1", 6379);
-    Motor_t* motor_1 = Motor(1, 1, "127.0.0.1", 6379);
+    Motor_t* motor_0 = Motor(0, 0, "127.0.0.1", 6379, 1000);
+    Motor_t* motor_1 = Motor(1, 1, "127.0.0.1", 6379, 1000);
     setGains(motor_0, 500, 0, 50);
     setGains(motor_1, 0, 0, 0);
 
