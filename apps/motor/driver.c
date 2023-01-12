@@ -63,34 +63,29 @@ static int stick_this_thread_to_core(int core_id) {
 }
 
 // Encoder callback
-void callback_enc_m0(int way)
-{
+void callback_enc_m0(int way) {
    pos_m0 += way;
    counts += 1;
 }
 
-void callback_enc_m1(int way)
-{
+void callback_enc_m1(int way) {
     pos_m1 += way;
 }
 
-void* callback_e0(void* data)
-{
+void* callback_e0(void* data) {
 	stick_this_thread_to_core(0);
 
 }
 
-void* callback_e1(void* data)
-{
+void* callback_e1(void* data) {
 	stick_this_thread_to_core(1);
 }
 
-void* callback_m0(void* data)
-{
+void* callback_m0(void* data) {
     stick_this_thread_to_core(1);
     double pos;
     Motor_t* motor = (Motor_t*) data;
-    setStartTime(motor->loop_timer);
+    initTimer(motor->loop_timer, 0);
     while (!terminate_flag) {
         pos = pos_m0 * ENC_SF;
         motor->curr_pos = pos;
@@ -98,12 +93,11 @@ void* callback_m0(void* data)
     }
 }
 
-void* callback_m1(void* data)
-{
+void* callback_m1(void* data) {
     stick_this_thread_to_core(2);
     double pos;
     Motor_t* motor = (Motor_t*) data;
-    setStartTime(motor->loop_timer);
+    initTimer(motor->loop_timer, 0);
     while (!terminate_flag) {
         pos = pos_m1 * ENC_SF;
         motor->curr_pos = pos;
@@ -133,8 +127,8 @@ int main() {
 	char motor_1_str[10];
 	char motor_pos_str[21];
 
-        // Initialize GPIO and signal handling
-        // gpioCfgSetInternals(1<<10);
+    // Initialize GPIO and signal handling
+    // gpioCfgSetInternals(1<<10);
 	if (gpioInitialise() < 0) return 1;
         signal(SIGINT, &sighandler); // intercept SIGINT
         signal(SIGABRT, &sighandler);
@@ -148,12 +142,12 @@ int main() {
     renc_0 = Pi_Renc(20, 21, callback_enc_m0);
     renc_1 = Pi_Renc(9, 10, callback_enc_m1);
 
-        // Initialize motors 
-        printf("Initializing Motors\n");
-        Motor_t* motor_0 = Motor(0, 0, "127.0.0.1", 6379, 10);
-        Motor_t* motor_1 = Motor(1, 1, "127.0.0.1", 6379, 10);
-        setGains(motor_0, 200, 0, 0);
-        setGains(motor_1, 0, 0, 0);
+    // Initialize motors 
+    printf("Initializing Motors\n");
+    Motor_t* motor_0 = Motor(0, 0, "127.0.0.1", 6379, 10);
+    Motor_t* motor_1 = Motor(1, 1, "127.0.0.1", 6379, 10);
+    setGains(motor_0, 200, 0, 0);
+    setGains(motor_1, 0, 0, 0);
 
 	// Update motor positions and desired positions with previous position
 	motor_0->prev_pos = prev_pos_m0;
@@ -167,10 +161,10 @@ int main() {
 	writeDesiredValues(motor_0, prev_pos_m0);
 	writeDesiredValues(motor_1, prev_pos_m1);
 
-        // Start motor threads 
-        printf("Starting Threads\n");
-        pthread_create(&t_id[0], NULL, callback_m0, (void*) motor_0);
-        pthread_create(&t_id[1], NULL, callback_m1, (void*) motor_1); 
+    // Start motor threads 
+    printf("Starting Threads\n");
+    pthread_create(&t_id[0], NULL, callback_m0, (void*) motor_0);
+    pthread_create(&t_id[1], NULL, callback_m1, (void*) motor_1); 
 
     // Execute termination lines in thread
     pthread_join(t_id[0], NULL);

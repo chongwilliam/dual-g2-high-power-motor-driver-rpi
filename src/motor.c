@@ -182,8 +182,8 @@ void updateControl(Motor_t* motor)
     readValues(motor);
 
     // Get elapsed time and set start timer
-    double dt = getLoopTime(motor->loop_timer);
-    // setStartTime(motor->loop_timer);
+    // double dt = getLoopTime(motor->loop_timer);
+    double dt = motor->loop_timer->loop_time;
 
     // Update velocity 
     updateVel(motor, dt);
@@ -215,7 +215,7 @@ void updateControl(Motor_t* motor)
     writeValues(motor);
 
     // Wait until next loop
-    waitUntilNextLoop(motor->loop_timer);  // this continuously updates end timer 
+    waitUntilNextLoop(motor->loop_timer);  // dt is computed when the motors are actuating 
 }
 
 void stopMotor(Motor_t* motor)

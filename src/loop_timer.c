@@ -32,11 +32,12 @@ static inline int lessThan(const timespec_t lhs, const timespec_t rhs) {
 }
 
 static inline timespec_t addTo(timespec_t t, unsigned int nsecs) {
-	while (nsecs >= 1e9) {
+	t.tv_sec += floor(nsecs / 1000000000);
+	t.tv_nsec += nsecs % 1000000000;
+	if (t.tv_nsec >= 1000000000L) {       // if ns field overflows
+		t.tv_nsec -= 1000000000L;       // handle "carry" to seconds field
 		t.tv_sec++;
-		nsecs -= 1e9;
 	}
-	t.tv_nsec += nsecs;
 	return t;
 }
 
@@ -49,30 +50,27 @@ LoopTimer_t* LoopTimer(int frequency)
     LoopTimer_t* timer;
     timer = malloc(sizeof(LoopTimer_t));
     timer->frequency = frequency;
-    timer->sample_time = 1e9 / frequency;  // ns
+    timer->sample_time = 1000000000. / frequency;  // ns
+	timer->loop_time = 0;
     return timer;
 }
 
 void initTimer(LoopTimer_t* timer, unsigned int initial_wait_nanoseconds)
 {
 	getCurrentTime(&timer->t_next);
-//	timer->t_next = addTo(timer->t_next, initial_wait_nanoseconds);
+	timer->t_next = addTo(timer->t_next, initial_wait_nanoseconds);
 	timer->t_start = timer->t_next;
 }
 
 void getCurrentTime(timespec_t* t)
 {
-	clock_gettime(CLOCK_MONOTONIC_RAW, t);
+	clock_gettime(CLOCK_MONOTONIC, t);
 }
 
 double getElapsedTime(LoopTimer_t* timer)
 {
- //   clock_gettime(CLOCK_MONOTONIC, &timer->end);
- //   double time_taken = (timer->end.tv_sec - timer->start.tv_sec) * 1e9;
- //   time_taken = (time_taken + (timer->end.tv_nsec - timer->start.tv_nsec)) * 1e-9;
- //   return 
 	struct timespec t_now;
-	getCurrentTime(&t_now);
+	clock_gettime(CLOCK_MONOTONIC, &t_now);
 	timespec_t t = subtract(t_now, timer->t_start);
 	return timespec_to_double(t);
 }
@@ -82,22 +80,12 @@ double getLoopTime(LoopTimer_t* timer)
 	return timespec_to_double(timer->t_loop);
 }
 
-// Absolute time w/ reference to CLOCK_MONOTONIC 
-void nanoSleepUntil(const timespec_t t_next) 
-{
-	clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &t_next, NULL);
-}
-
 void waitUntilNextLoop(LoopTimer_t* timer)
 {
 	clock_gettime(CLOCK_MONOTONIC, &timer->t_curr);
-	timespec_t dt = subtract(timer->t_next, timer->t_curr);
-	printf("dt at start: %f\n", timespec_to_double(dt));
-	printf("t_next: %f\n", timespec_to_double(timer->t_next));
-
 	if (lessThan(timer->t_curr, timer->t_next)) {
-		printf("Wait\n");
 		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &timer->t_next, NULL);
 	}
+	timer->loop_time = timespec_to_double(subtract(timer->t_next, timer->t_curr));
 	timer->t_next = addTo(timer->t_next, timer->sample_time);
 }

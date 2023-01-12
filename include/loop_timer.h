@@ -27,6 +27,7 @@ struct LoopTimer_s
 	timespec_t t_loop;
     int frequency;
 	double sample_time;
+    double loop_time;
 };
 
 typedef struct LoopTimer_s LoopTimer_t;
@@ -37,7 +38,6 @@ void initTimer(LoopTimer_t* timer, unsigned int initial_wait_nanoseconds);
 void getCurrentTime(timespec_t* t);
 double getElapsedTime(LoopTimer_t* timer);
 double getLoopTime(LoopTimer_t* timer);
-void nanoSleepUntil(const timespec_t t_next);
 void waitUntilNextLoop(LoopTimer_t* timer);
 
 #endif
